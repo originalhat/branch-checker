@@ -23,7 +23,7 @@ class BranchChecker
   end
 
   def validate_ref(ref)
-    `git check-ref-format --branch '#{ref}'`
+    `git check-ref-format --branch #{ref}'`
     $?.exitstatus
   end
 end
