@@ -1,2 +1,2 @@
-web: bundle exec ruby adapter.rb --port $PORT
+web: bundle exec thin start -R config.ru -e production -p $PORT
 
