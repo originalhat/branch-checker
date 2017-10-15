@@ -1,23 +1,36 @@
 require 'thin'
+require 'uri'
+require 'cgi'
 
-class SimpleAdapter
+class BranchChecker
   def call(env)
-    ref = env['PATH_INFO'][1..-1]
+    ref = parse_ref(env['REQUEST_URI'])
 
+    if ref
+      exit_status = validate_ref(ref)
+      [
+        exit_status == 0 ? 200 : 400,
+        { 'Content-Type' => 'text/plain' },
+        ["The branch \"#{ref}\" is #{exit_status == 0 ? 'valid' : 'invalid'}"]
+      ]
+    end
+  end
+
+  private
+
+  def parse_ref(request_uri)
+    CGI::parse(URI.parse(request_uri).query)["branch"].first
+  end
+
+  def validate_ref(ref)
     `git check-ref-format --branch '#{ref}'`
-    exit_status = $?.exitstatus
-
-    [
-      exit_status == 0 ? 200 : 400,
-      { 'Content-Type' => 'text/plain' },
-      ["The branch \"#{ref}\" is #{exit_status == 0 ? 'valid' : 'invalid'}"]
-    ]
+    $?.exitstatus
   end
 end
 
 Thin::Server.start('0.0.0.0', 3000) do
   use Rack::CommonLogger
-  map '/test' do
-    run SimpleAdapter.new
+  map '/validate' do
+    run BranchChecker.new
   end
 end
